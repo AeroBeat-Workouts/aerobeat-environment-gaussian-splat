@@ -28,11 +28,28 @@ autoload/singleton entry point without changing call sites.
 From the repo root:
 
 ```bash
+./scripts/restore-testbed-addons.sh
 cd .testbed
-godotenv addons install
 godot --headless --path . --import
 godot --headless --path . --script addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit
 ```
+
+## Clean restore flow for GodotEnv-managed addons
+
+If Godot-generated imports make an installed addon look dirty, use the canonical
+repo-local restore flow instead of manually deleting folders by hand:
+
+```bash
+./scripts/restore-testbed-addons.sh
+```
+
+That script clears the generated install targets first:
+
+- `.testbed/addons/*` except `.editorconfig`
+- `.testbed/.addons/`
+
+Then it reruns `godotenv addons install` so the wrapper testbed comes back in a
+known-clean state.
 
 ## `.testbed` contents
 
