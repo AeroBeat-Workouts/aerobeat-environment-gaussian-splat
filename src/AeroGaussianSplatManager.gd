@@ -20,8 +20,10 @@ func configure_world_environment(world_environment: WorldEnvironment) -> void:
 		return
 	if world_environment.compositor == null:
 		world_environment.compositor = Compositor.new()
-	for effect in world_environment.compositor.compositor_effects:
-		if effect != null and effect.get_script() == COMPOSITOR_EFFECT_SCRIPT:
+	var compositor := world_environment.compositor
+	var compositor_effects := compositor.compositor_effects
+	for existing_effect in compositor_effects:
+		if existing_effect != null and existing_effect.get_script() == COMPOSITOR_EFFECT_SCRIPT:
 			return
 	var effect := CompositorEffect.new()
 	effect.effect_callback_type = CompositorEffect.EFFECT_CALLBACK_TYPE_POST_TRANSPARENT
@@ -29,7 +31,8 @@ func configure_world_environment(world_environment: WorldEnvironment) -> void:
 	effect.access_resolved_depth = true
 	effect.needs_motion_vectors = false
 	effect.set_script(COMPOSITOR_EFFECT_SCRIPT)
-	world_environment.compositor.compositor_effects.append(effect)
+	compositor_effects.append(effect)
+	compositor.compositor_effects = compositor_effects
 
 func load_gaussian_resource_from_path(asset_path: String) -> Dictionary:
 	var normalized_path := asset_path.strip_edges()
