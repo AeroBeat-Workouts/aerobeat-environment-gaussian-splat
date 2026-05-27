@@ -1,19 +1,24 @@
 extends Node3D
 
-const TOOL_MANAGER_SCRIPT := preload("res://src/AeroGaussianSplatManager.gd")
-
 var _tool_manager: AeroGaussianSplatManager
 var _world_environment: WorldEnvironment
 var _camera: Camera3D
+var _loaded_splat: Node3D
 
 func _ready() -> void:
-	_tool_manager = TOOL_MANAGER_SCRIPT.new()
+	_tool_manager = AeroGaussianSplatManager.new()
 	add_child(_tool_manager)
 	_setup_scene()
+
 	var sample_path := ProjectSettings.globalize_path("res://assets/splats/demo.ply")
-	var result := _tool_manager.create_splat_node_from_path(sample_path)
+	var result := _tool_manager.load_splat(sample_path, self, {
+		"position": Vector3.ZERO,
+		"rotation_degrees": Vector3(0.0, 45.0, 0.0),
+		"world_environment": _world_environment,
+	})
 	if result.get("ok", false):
-		add_child(result["node"])
+		_loaded_splat = result.get("node", null)
+		print("Gaussian splat load ok: %s (%d points, support=%s)" % [sample_path, int(result.get("point_count", 0)), String(_tool_manager.get_renderer_support_status().get("support_level", "unknown"))])
 	else:
 		push_warning(result.get("message", "Unknown splat load failure"))
 
@@ -28,7 +33,6 @@ func _setup_scene() -> void:
 	env.background_color = Color(0.07, 0.07, 0.09)
 	_world_environment.environment = env
 	add_child(_world_environment)
-	_tool_manager.configure_world_environment(_world_environment)
 
 	var light := DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-45.0, 30.0, 0.0)

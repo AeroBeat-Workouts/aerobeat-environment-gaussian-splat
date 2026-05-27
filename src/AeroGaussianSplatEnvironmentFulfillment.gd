@@ -112,6 +112,7 @@ func begin_fulfill(request: Variant) -> AeroEnvironmentOperation:
 	_operation_mark_started(operation, queued_progress)
 
 	var gaussian_manager = _ensure_gaussian_manager()
+	_ensure_manager_in_scene_tree(gaussian_manager)
 	var start_result: Dictionary = gaussian_manager.begin_create_splat_node_from_path(absolute_path)
 	if not start_result.get("ok", false):
 		var start_error = _build_error(
@@ -419,6 +420,13 @@ func _ensure_gaussian_manager() -> AeroGaussianSplatManager:
 	if _gaussian_manager == null:
 		_gaussian_manager = GaussianSplatManagerScript.new()
 	return _gaussian_manager
+
+func _ensure_manager_in_scene_tree(gaussian_manager: AeroGaussianSplatManager) -> void:
+	if gaussian_manager == null or gaussian_manager.is_inside_tree():
+		return
+	var main_loop := Engine.get_main_loop()
+	if main_loop is SceneTree and (main_loop as SceneTree).root != null:
+		(main_loop as SceneTree).root.add_child(gaussian_manager)
 
 func _build_error(request: AeroEnvironmentRequest, error_code: String, message: String, details: Dictionary = {}) -> AeroEnvironmentError:
 	return AeroEnvironmentError.new({

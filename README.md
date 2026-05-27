@@ -1,98 +1,136 @@
 # AeroBeat Tool - Gaussian Splat
 
-`aerobeat-tool-gaussian-splat` is the AeroBeat-facing Gaussian splat loader singleton tool.
-Its repo-root wrapper now adapts into the shared `aerobeat-environment-core` contract while the
-real reusable decode/load/build/background/compositor runtime stays in the lower fulfillment
-package.
+`aerobeat-tool-gaussian-splat` is the AeroBeat Gaussian splat runtime wrapper.
+The real implementation now lives in this repo's `src/` scripts, and the hidden
+`.testbed/` project installs that repo-root surface directly through GodotEnv.
+There is no longer a separate tracked lower-package implementation inside this
+repo; anything generated under `.testbed/addons/` is disposable mirror state.
 
-## Boundary
+## Architecture truth
 
-- This repo exposes the stable AeroBeat wrapper API from `src/` for standalone use.
-- The repo-root wrapper now also exposes a contract-facing fulfillment adapter that depends on `aerobeat-environment-core` for request/result/error/config vocabulary.
-- The real reusable fulfillment runtime still lives in the dependency-safe lower package at `addons/aerobeat-environment-gaussian-splat-fulfillment/`.
-- It depends on the pinned vendor payload in `aerobeat-vendor-gdgs`.
-- Downstream product/testbed repos should depend on this repo for splat-specific fulfillment instead of loading the third-party decoders directly.
-- Sibling repos that need the real splat fulfillment logic **without** wrapper-global `class_name` collisions should depend on the lower package subfolder rather than the repo root wrapper package.
-- Consumer projects that use the contract-facing adapter must also install `aerobeat-environment-core` at `res://addons/aerobeat-environment-core`.
+- `src/AeroGaussianSplatManager.gd` is the public singleton-shaped entrypoint.
+- `src/gaussian_splat_runtime.gd` and the local background helper scripts contain the real load/decode/build/runtime logic.
+- `src/AeroGaussianSplatEnvironmentFulfillment.gd` is the environment-loader integration seam for contract-shaped requests/results.
+- `.testbed/` is the only supported local validation sandbox. Do real work in repo-root `src/` and `.testbed/`, not in generated addon mirrors.
 
-## Current runtime surface
+## Public runtime surface
 
-`AeroGaussianSplatManager` can:
+`AeroGaussianSplatManager` is responsible for loading, placing, rotating, and unloading gaussian splats.
 
-- detect supported splat formats by extension
-- load `.ply`, `.compressed.ply`, `.splat`, and `.sog` files from **absolute/local paths**
-- create a `GaussianSplatNode` with an in-memory `GaussianResource`
-- start a background-threaded load via `begin_load_gaussian_resource_from_path()` or `begin_create_splat_node_from_path()` and emit `background_load_started` / `background_load_progressed` / `background_load_finished`; background loading currently supports only `.ply` and `.compressed.ply`, while `.splat` and `.sog` still use the existing synchronous path
-- report renderer-path support truth via `get_renderer_support_status()` so downstream UI can avoid overclaiming visible render support
-- configure a `WorldEnvironment` with the gdgs compositor effect only when the current renderer exposes the required `RenderingDevice` path
-- report basic debug metadata such as `point_count`, `aabb`, and detected format
+Core methods:
 
-`AeroToolManager` currently mirrors that surface so it can be used as a future
-autoload/singleton entry point without changing call sites.
+- `load_gaussian_resource_from_path(absolute_path)`
+- `create_splat_node_from_path(absolute_path)`
+- `load_splat(absolute_path, parent := null, options := {})`
+- `place_splat(node, parent := null, options := {})`
+- `rotate_splat(node, rotation_degrees)`
+- `unload_splat(node)`
+- `begin_load_gaussian_resource_from_path(absolute_path)`
+- `begin_create_splat_node_from_path(absolute_path)`
+- `get_background_load_status()`
+- `configure_world_environment(world_environment)`
+- `get_renderer_support_status()`
 
-`AeroGaussianSplatEnvironmentFulfillment` / `AeroToolManager.fulfill_environment_request()` can:
+Supported formats:
 
-- accept either a `Dictionary` request or a typed `AeroEnvironmentRequest`
-- validate against the shared `aerobeat-environment-core` `.compressed.ply` contract
-- return a typed `AeroEnvironmentResult` on success or `AeroEnvironmentError` on failure
-- keep the loaded `node`, `resource`, `point_count`, and config payload in `result.details`
-- optionally apply JSON sidecar config and configure a provided `WorldEnvironment`
+- `.ply`
+- `.compressed.ply`
+- `.splat`
+- `.sog`
 
-`AeroGaussianSplatEnvironmentFulfillment.begin_fulfill()` / `AeroToolManager.begin_fulfill()` now add the async contract path on top of that sync surface:
+Current path expectations:
 
-- they keep the existing sync `fulfill()` behavior intact for compatibility
-- they wrap lower-runtime `background_load_started` / `background_load_progressed` / `background_load_finished` dictionaries into typed operation progress/result/error updates
-- they use shared contract `status` values for cross-kind stages while preserving splat-specific detail in `phase`
-- they perform config application and optional `WorldEnvironment` compositor wiring after the background decode/build step completes
-- they do **not** overclaim the known renderer/compositor bug as solved; async plumbing is complete even though stable visible render validation is still partially blocked
+- load calls expect **absolute/local paths**
+- background loading currently supports only `.ply` and `.compressed.ply`
+- `.splat` and `.sog` still use the synchronous path
 
-## GodotEnv development flow
+## Environment-loader seam
+
+For generic environment loading, use `AeroGaussianSplatEnvironmentFulfillment`.
+It keeps environment-loader concerns contract-shaped while delegating real splat
+work to `AeroGaussianSplatManager`.
+
+`AeroGaussianSplatEnvironmentFulfillment` can:
+
+- accept a `Dictionary` request or typed `AeroEnvironmentRequest`
+- enforce the current official environment contract for `.compressed.ply`
+- return typed `AeroEnvironmentResult` / `AeroEnvironmentError`
+- apply sidecar transform config after load
+- optionally configure a provided `WorldEnvironment`
+- bridge async runtime progress into contract progress/result/error objects
+
+The important seam is:
+
+- `AeroGaussianSplatManager` owns splat runtime behavior
+- `AeroGaussianSplatEnvironmentFulfillment` owns environment-contract translation
+
+## Renderer support truth
+
+Use `get_renderer_support_status()` before claiming visible render support.
+
+- renderer paths without a `RenderingDevice` are **unsupported** for visible gaussian splat rendering
+- renderer paths with a `RenderingDevice` are still only **experimental**
+- in the current validation slice, Forward+ / Vulkan has reproduced compositor-side crashes after a successful load, so visible output should not be overclaimed yet
+
+Successful loads may therefore decode/build correctly even when screenshots do
+not show stable visible splat output.
+
+## GodotEnv testbed flow
 
 From the repo root:
 
 ```bash
-./scripts/restore-testbed-addons.sh
 cd .testbed
+godotenv addons install
 godot --headless --path . --import
 godot --headless --path . --script addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit
 ```
 
-## Clean restore flow for GodotEnv-managed addons
-
-If Godot-generated imports make an installed addon look dirty, use the canonical
-repo-local restore flow instead of manually deleting folders by hand:
+Smoke scene load attempt:
 
 ```bash
-./scripts/restore-testbed-addons.sh
+godot --headless --path .testbed --scene res://scenes/splat_loader_smoke.tscn --quit-after 2
 ```
 
-That script clears the generated install targets first:
+## `.testbed` layout
 
-- `.testbed/addons/*` except `.editorconfig`
-- `.testbed/.addons/`
-
-Then it reruns `godotenv addons install` so the wrapper testbed comes back in a
-known-clean state.
-
-## `.testbed` contents
-
-- `assets/splats/` - local sample splat payloads for loader validation
+- `addons.jsonc` - GodotEnv manifest for the hidden validation project
+- `assets/splats/` - sample splat payloads used for real load attempts
 - `scenes/splat_loader_smoke.tscn` - direct runtime smoke scene
-- `scripts/splat_loader_smoke.gd` - test scene logic
-- `tests/` - repo-local unit tests
+- `scripts/splat_loader_smoke.gd` - smoke scene logic
+- `tests/` - repo-local GUT coverage
 
-## Runtime use
+## Usage examples
 
-Standalone/public wrapper path:
+### Load + place a splat
 
 ```gdscript
 var manager := AeroGaussianSplatManager.new()
-var result := manager.create_splat_node_from_path("/absolute/path/to/scene.ply")
+add_child(manager)
+
+var result := manager.load_splat("/absolute/path/to/scene.ply", self, {
+    "position": Vector3(0, 0, 0),
+    "rotation_degrees": Vector3(0, 45, 0),
+})
 if result.ok:
-    add_child(result.node)
+    print("Loaded %d points" % int(result.point_count))
 ```
 
-Contract-facing fulfillment adapter path:
+### Rotate or unload an existing splat
+
+```gdscript
+manager.rotate_splat(result.node, Vector3(0, 90, 0))
+manager.unload_splat(result.node)
+```
+
+### Configure compositor support when available
+
+```gdscript
+var world_environment := WorldEnvironment.new()
+manager.configure_world_environment(world_environment)
+```
+
+### Contract-shaped environment fulfillment
 
 ```gdscript
 const AeroEnvironmentRequest := preload("res://addons/aerobeat-environment-core/src/contracts/data_types/environment_request.gd")
@@ -103,11 +141,11 @@ var result = fulfillment.fulfill(AeroEnvironmentRequest.new({
     "kind": "splat",
     "asset_path": "/absolute/path/to/scene.compressed.ply"
 }))
-if result is AeroEnvironmentResult and result.ok:
+if result.ok:
     add_child(result.details["node"])
 ```
 
-Async contract-facing adapter path:
+### Async environment fulfillment
 
 ```gdscript
 var operation = fulfillment.begin_fulfill(AeroEnvironmentRequest.new({
@@ -124,43 +162,3 @@ operation.finished.connect(func(_op):
         add_child(operation.result.details["node"])
 )
 ```
-
-Dependency-safe lower-package path for sibling consumers:
-
-```gdscript
-const GaussianSplatRuntime := preload("res://addons/aerobeat-environment-gaussian-splat-fulfillment/runtime/gaussian_splat_runtime.gd")
-
-var runtime = GaussianSplatRuntime.new()
-var result := runtime.create_splat_node_from_path("/absolute/path/to/scene.ply")
-if result.ok:
-    add_child(result.node)
-```
-
-```gdscript
-var manager := AeroGaussianSplatManager.new()
-manager.background_load_progressed.connect(func(result):
-    if result.pending:
-        print("%s: %0.1f%%" % [result.status, result.progress * 100.0])
-)
-manager.background_load_finished.connect(func(result):
-    if result.ok:
-        add_child(result.node)
-)
-manager.begin_create_splat_node_from_path("/absolute/path/to/scene.compressed.ply")
-```
-
-Background loading is currently limited to `.ply` and `.compressed.ply`. Use the existing synchronous load/create calls for `.splat` and `.sog` assets.
-
-Renderer-path truth:
-
-- `get_renderer_support_status()` is the stable way to ask whether the current renderer path can even attempt visible splat output.
-- Renderer paths without a `RenderingDevice` backend should be treated as **unsupported for visible splat rendering**; the wrapper will not attach the gdgs compositor there.
-- Renderer paths with a `RenderingDevice` are still currently reported as **experimental** until the visible render path is validated end-to-end on that backend/hardware combination.
-- In the current validation slice, Forward+ / Vulkan has reproduced compositor-side crashes after successful load, so downstream UI should avoid claiming stable visible output there yet.
-
-Progress semantics for async loads:
-
-- `background_load_started` returns `pending = true` with `progress = 0.0`.
-- `background_load_progressed` is emitted while work is still pending; its `progress` value stays below `1.0` until the load is actually complete.
-- `background_load_finished` is the only success payload that reports `pending = false`, `phase = "ready"`, `status = "Ready"`, and `progress = 1.0`.
-- Unsupported async formats (`.splat`, `.sog`) should continue to use the synchronous compatibility path in downstream UI.
