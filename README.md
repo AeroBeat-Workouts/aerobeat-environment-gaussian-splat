@@ -1,6 +1,6 @@
-# AeroBeat Environment - Gaussian Splat
+# AeroBeat Tool - Gaussian Splat
 
-`aerobeat-environment-gaussian-splat` is the AeroBeat-facing Gaussian splat fulfillment repo.
+`aerobeat-tool-gaussian-splat` is the AeroBeat-facing Gaussian splat loader singleton tool.
 Its repo-root wrapper now adapts into the shared `aerobeat-environment-core` contract while the
 real reusable decode/load/build/background/compositor runtime stays in the lower fulfillment
 package.
