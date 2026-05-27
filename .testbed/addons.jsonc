@@ -2,14 +2,8 @@
   "$schema": "https://chickensoft.games/schemas/addons.schema.json",
   "addons": {
     // Install the repo-local lower fulfillment package exactly how downstream consumers should target it.
-    "aerobeat-environment-gaussian-splat-fulfillment": {
+    "aerobeat-environment-gaussian-splat": {
       "url": "..",
-      "source": "symlink",
-      "subfolder": "/addons/aerobeat-environment-gaussian-splat-fulfillment"
-    },
-    // Shared environment contract package used by the AeroBeat-facing adapter wrapper.
-    "aerobeat-environment-core": {
-      "url": "../../aerobeat-environment-core",
       "source": "symlink",
       "subfolder": "/"
     },
