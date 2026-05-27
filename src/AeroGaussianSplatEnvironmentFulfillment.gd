@@ -60,12 +60,16 @@ func fulfill(request: Variant) -> Variant:
 			config_result
 		)
 
-	var context: Dictionary = normalized_request.context
-	var world_environment = context.get("world_environment", null)
-	var world_environment_configured = false
-	if world_environment is WorldEnvironment:
-		gaussian_manager.configure_world_environment(world_environment)
-		world_environment_configured = world_environment.compositor != null and world_environment.compositor.compositor_effects.size() > 0
+	var placement_result := _place_loaded_node(gaussian_manager, normalized_request.context, node)
+	if not placement_result.get("ok", false):
+		if node != null and is_instance_valid(node):
+			node.queue_free()
+		return _build_error(
+			normalized_request,
+			AeroEnvironmentConstants.ERROR_INVALID_CONFIG,
+			String(placement_result.get("message", "Gaussian splat placement failed.")),
+			placement_result
+		)
 
 	var details = {
 		"node": node,
@@ -73,7 +77,11 @@ func fulfill(request: Variant) -> Variant:
 		"point_count": int(load_result.get("point_count", 0)),
 		"aabb": load_result.get("aabb", AABB()),
 		"config": config_result.get("config", {}),
-		"world_environment_configured": world_environment_configured,
+		"placed": placement_result.get("placed", false),
+		"parent": placement_result.get("parent", {}),
+		"transform_applied": placement_result.get("transform_applied", false),
+		"transform": placement_result.get("transform", {}),
+		"world_environment_configured": placement_result.get("world_environment_configured", false),
 	}
 	return AeroEnvironmentResult.new({
 		"ok": true,
@@ -251,12 +259,25 @@ func _on_background_load_finished(result: Dictionary, operation_id: String) -> v
 		return
 
 	var gaussian_manager = _ensure_gaussian_manager()
-	var request_context: Dictionary = request.context
-	var world_environment = request_context.get("world_environment", null)
-	var world_environment_configured = false
-	if world_environment is WorldEnvironment:
-		gaussian_manager.configure_world_environment(world_environment)
-		world_environment_configured = world_environment.compositor != null and world_environment.compositor.compositor_effects.size() > 0
+	var placement_result := _place_loaded_node(gaussian_manager, request.context, node)
+	if not placement_result.get("ok", false):
+		if node != null and is_instance_valid(node):
+			node.queue_free()
+		var placement_error = _build_error(
+			request,
+			AeroEnvironmentConstants.ERROR_INVALID_CONFIG,
+			String(placement_result.get("message", "Gaussian splat placement failed.")),
+			placement_result
+		)
+		var placement_failed_progress: AeroEnvironmentProgress = _build_contract_progress(request, {
+			"pending": false,
+			"phase": "applying_config",
+			"status": String(placement_result.get("message", "Applying placement failed")),
+			"progress": maxf(float(result.get("progress", 0.0)), 0.97),
+		}, _next_operation_sequence(operation_id), AeroEnvironmentConstants.STATE_FAILED, AeroEnvironmentConstants.STATUS_FAILED)
+		_operation_fail(operation, placement_error, placement_failed_progress)
+		_active_operations.erase(operation_id)
+		return
 
 	var details = {
 		"node": node,
@@ -264,7 +285,11 @@ func _on_background_load_finished(result: Dictionary, operation_id: String) -> v
 		"point_count": int(result.get("point_count", 0)),
 		"aabb": result.get("aabb", AABB()),
 		"config": config_result.get("config", {}),
-		"world_environment_configured": world_environment_configured,
+		"placed": placement_result.get("placed", false),
+		"parent": placement_result.get("parent", {}),
+		"transform_applied": placement_result.get("transform_applied", false),
+		"transform": placement_result.get("transform", {}),
+		"world_environment_configured": placement_result.get("world_environment_configured", false),
 	}
 	var success_result = AeroEnvironmentResult.new({
 		"ok": true,
@@ -415,6 +440,25 @@ func _apply_config_if_present(request: AeroEnvironmentRequest, target: Variant) 
 		"config_path": config_path,
 		"config": config_dict,
 	}
+
+func _place_loaded_node(gaussian_manager: AeroGaussianSplatManager, request_context: Dictionary, node: Variant) -> Dictionary:
+	if not (node is Node3D):
+		return {
+			"ok": false,
+			"message": "Gaussian splat fulfillment did not produce a Node3D for placement.",
+		}
+	return gaussian_manager.place_splat(node as Node3D, _extract_parent_node(request_context), _build_placement_options(request_context))
+
+func _extract_parent_node(request_context: Dictionary) -> Node:
+	var parent_candidate: Variant = request_context.get("parent", null)
+	return parent_candidate as Node if parent_candidate is Node else null
+
+func _build_placement_options(request_context: Dictionary) -> Dictionary:
+	var options := {}
+	for key in ["position", "rotation", "rotation_degrees", "scale", "world_environment"]:
+		if request_context.has(key):
+			options[key] = request_context[key]
+	return options
 
 func _ensure_gaussian_manager() -> AeroGaussianSplatManager:
 	if _gaussian_manager == null:

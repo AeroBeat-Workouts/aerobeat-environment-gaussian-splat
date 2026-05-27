@@ -38,27 +38,33 @@ func test_load_place_rotate_and_unload_splat() -> void:
 	var world_environment := WorldEnvironment.new()
 	add_child_autofree(parent)
 	add_child_autofree(world_environment)
+	parent.name = "LoadParent"
 	parent.add_child(manager)
 	var absolute_path := ProjectSettings.globalize_path(SAMPLE_PLY)
 
 	var load_result := manager.load_splat(absolute_path, parent, {
-		"position": Vector3(1, 2, 3),
-		"rotation_degrees": Vector3(0, 45, 0),
-		"scale": Vector3(2, 2, 2),
+		"position": {"x": 1, "y": 2, "z": 3},
+		"rotation": [0.0, deg_to_rad(45.0), 0.0],
+		"scale": [2, 2, 2],
 		"world_environment": world_environment,
 	})
 	assert_true(load_result.get("ok", false), load_result.get("message", "Expected sample PLY to load and attach"))
 	assert_true(load_result.get("placed", false), "load_splat should attach the node when a parent is provided")
 	assert_true(load_result.get("transform_applied", false), "load_splat should apply transform options")
+	assert_eq(load_result.get("parent", {}).get("name", ""), "LoadParent")
 	var node: Variant = load_result.get("node", null)
 	assert_true(node is Node3D, "load_splat should return a Node3D instance")
 	assert_eq((node as Node3D).position, Vector3(1, 2, 3))
 	assert_almost_eq((node as Node3D).rotation_degrees.y, 45.0, 0.001)
 	assert_eq((node as Node3D).scale, Vector3(2, 2, 2))
+	assert_eq(load_result.get("transform", {}).get("position", Vector3.ZERO), Vector3(1, 2, 3))
+	assert_almost_eq(load_result.get("transform", {}).get("rotation_degrees", Vector3.ZERO).y, 45.0, 0.001)
+	assert_eq(load_result.get("transform", {}).get("scale", Vector3.ONE), Vector3(2, 2, 2))
 
 	var rotate_result := manager.rotate_splat(node as Node3D, Vector3(0, 90, 0))
 	assert_true(rotate_result.get("ok", false), "rotate_splat should succeed for a valid node")
 	assert_almost_eq((node as Node3D).rotation_degrees.y, 90.0, 0.001)
+	assert_almost_eq(rotate_result.get("transform", {}).get("rotation_degrees", Vector3.ZERO).y, 90.0, 0.001)
 
 	var unload_result := manager.unload_splat(node as Node)
 	assert_true(unload_result.get("ok", false), "unload_splat should succeed for a valid node")
@@ -118,6 +124,39 @@ func test_contract_fulfillment_applies_config_and_can_configure_world_environmen
 	if configured_manager != null and is_instance_valid(configured_manager):
 		configured_manager.free()
 	world_environment.free()
+
+func test_contract_fulfillment_attaches_to_parent_and_reports_transform() -> void:
+	var fulfillment := AeroGaussianSplatEnvironmentFulfillment.new()
+	var parent := Node3D.new()
+	parent.name = "ContractParent"
+	add_child_autofree(parent)
+	var request := {
+		"request_id": "req-splat-parented",
+		"kind": "splat",
+		"asset_path": ProjectSettings.globalize_path(SAMPLE_COMPRESSED_PLY),
+		"context": {
+			"parent": parent,
+			"position": [1, 2, 3],
+			"rotation_degrees": {"x": 0, "y": 30, "z": 0},
+			"scale": Vector3(1.5, 1.5, 1.5),
+		},
+	}
+	var result = fulfillment.fulfill(request)
+	assert_true(result is RESULT_SCRIPT, "Parented fulfillment should still return a typed environment result")
+	assert_true(result.ok, "Parented fulfillment should succeed")
+	assert_true(result.details.get("placed", false), "Fulfillment should report when a parent attachment was requested")
+	assert_eq(result.details.get("parent", {}).get("name", ""), "ContractParent")
+	assert_eq(result.details.get("transform", {}).get("position", Vector3.ZERO), Vector3(1, 2, 3))
+	assert_almost_eq(result.details.get("transform", {}).get("rotation_degrees", Vector3.ZERO).y, 30.0, 0.001)
+	assert_eq(result.details.get("transform", {}).get("scale", Vector3.ONE), Vector3(1.5, 1.5, 1.5))
+	var node: Variant = result.details.get("node", null)
+	assert_true(node is Node3D, "Parented fulfillment should return a Node3D")
+	assert_eq((node as Node3D).get_parent(), parent)
+	if node != null and is_instance_valid(node):
+		(node as Node).free()
+	var parented_manager := fulfillment.get_gaussian_manager()
+	if parented_manager != null and is_instance_valid(parented_manager):
+		parented_manager.free()
 
 func test_contract_fulfillment_rejects_non_contract_formats_even_if_wrapper_supports_them() -> void:
 	var fulfillment = AeroGaussianSplatEnvironmentFulfillment.new()
