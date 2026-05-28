@@ -1,7 +1,7 @@
 # AeroBeat Gaussian Splat Testbed
 
 This hidden GodotEnv project is the repo-local validation sandbox for
-`aerobeat-tool-gaussian-splat`.
+`aerobeat-tool-gaussian-splat-loader`.
 
 ## Rules
 

@@ -1,6 +1,6 @@
 # AeroBeat Tool - Gaussian Splat Loader
 
-`aerobeat-tool-gaussian-splat` is the AeroBeat Gaussian splat runtime wrapper.
+`aerobeat-tool-gaussian-splat-loader` is the AeroBeat Gaussian splat runtime wrapper.
 The real implementation now lives in this repo's `src/` scripts, and the hidden
 `.testbed/` project installs that repo-root surface directly through GodotEnv.
 There is no longer a separate tracked lower-package implementation inside this
