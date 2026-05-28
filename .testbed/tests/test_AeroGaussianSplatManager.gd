@@ -2,7 +2,7 @@ extends GutTest
 
 const SAMPLE_PLY := "res://assets/splats/demo.ply"
 const SAMPLE_COMPRESSED_PLY := "res://assets/splats/demo.compressed.ply"
-const LOCAL_RUNTIME_SCRIPT := preload("res://addons/aerobeat-environment-gaussian-splat/src/gaussian_splat_runtime.gd")
+const LOCAL_RUNTIME_SCRIPT := preload("res://addons/aerobeat-tool-gaussian-splat-loader/src/gaussian_splat_runtime.gd")
 const REQUEST_SCRIPT := preload("res://addons/aerobeat-environment-core/src/contracts/data_types/environment_request.gd")
 const RESULT_SCRIPT := preload("res://addons/aerobeat-environment-core/src/contracts/data_types/environment_result.gd")
 const ERROR_SCRIPT := preload("res://addons/aerobeat-environment-core/src/contracts/data_types/environment_error.gd")

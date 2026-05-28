@@ -3,7 +3,7 @@
   "addons": {
     // Install the repo-root package directly so the hidden testbed exercises the
     // same public src/ surface that real consumers use.
-    "aerobeat-environment-gaussian-splat": {
+    "aerobeat-tool-gaussian-splat-loader": {
       "url": "..",
       "source": "symlink",
       "subfolder": "/"
