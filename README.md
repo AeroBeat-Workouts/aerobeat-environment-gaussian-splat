@@ -4,11 +4,12 @@
 The real implementation now lives in this repo's `src/` scripts, and the hidden
 `.testbed/` project installs that repo-root surface directly through GodotEnv.
 There is no longer a separate tracked lower-package implementation inside this
-repo; anything generated under `.testbed/addons/` is disposable mirror state.
+repo, and there is no `src/AeroToolManager.gd` compatibility wrapper anymore;
+anything generated under `.testbed/addons/` is disposable mirror state.
 
 ## Architecture truth
 
-- `src/AeroGaussianSplatManager.gd` is the public singleton-shaped entrypoint.
+- `src/AeroGaussianSplatManager.gd` is the real public/runtime class and singleton-shaped entrypoint.
 - `src/gaussian_splat_runtime.gd` and the local background helper scripts contain the real load/decode/build/runtime logic.
 - `src/AeroGaussianSplatEnvironmentFulfillment.gd` is the environment-loader integration seam for contract-shaped requests/results.
 - `.testbed/` is the only supported local validation sandbox. Do real work in repo-root `src/` and `.testbed/`, not in generated addon mirrors.
@@ -135,7 +136,10 @@ manager.configure_world_environment(world_environment)
 ```gdscript
 const AeroEnvironmentRequest := preload("res://addons/aerobeat-environment-core/src/contracts/data_types/environment_request.gd")
 
-var fulfillment := AeroGaussianSplatEnvironmentFulfillment.new()
+var manager := AeroGaussianSplatManager.new()
+add_child(manager)
+
+var fulfillment := AeroGaussianSplatEnvironmentFulfillment.new(manager)
 var result = fulfillment.fulfill(AeroEnvironmentRequest.new({
     "request_id": "req-1",
     "kind": "splat",

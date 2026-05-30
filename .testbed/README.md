@@ -7,7 +7,7 @@ This hidden GodotEnv project is the repo-local validation sandbox for
 
 - Edit real code in repo-root `src/`.
 - Use `.testbed/` for validation assets, smoke scenes, and tests.
-- Do **not** treat `.testbed/addons/` as source of truth. GodotEnv generates that mirror state from `addons.jsonc`.
+- Do **not** treat `.testbed/addons/` as source of truth. GodotEnv generates that mirror state from `addons.jsonc`, and the truthful runtime surface is the repo-root `src/AeroGaussianSplatManager.gd` class.
 
 ## Install / refresh addons
 
