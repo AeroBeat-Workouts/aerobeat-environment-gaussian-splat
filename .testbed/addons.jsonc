@@ -8,9 +8,9 @@
       "source": "symlink",
       "subfolder": "/"
     },
-    // Pin the vendor payload at res://addons/gdgs so upstream decoder/runtime
+    // Pin the vendor payload at res://addons/aerobeat-vendor-gdgs so upstream decoder/runtime
     // paths stay honest.
-    "gdgs": {
+    "aerobeat-vendor-gdgs": {
       "url": "git@github.com:AeroBeat-Workouts/aerobeat-vendor-gdgs.git",
       "checkout": "main",
       "subfolder": "/src"

@@ -1,10 +1,10 @@
 extends RefCounted
 
-const STANDARD_PLY_DECODER := preload("res://addons/gdgs/importers/decoders/standard_ply_decoder.gd")
-const COMPRESSED_PLY_DECODER := preload("res://addons/gdgs/importers/decoders/compressed_ply_decoder.gd")
-const SPLAT_DECODER := preload("res://addons/gdgs/importers/decoders/splat_decoder.gd")
-const SOG_DECODER := preload("res://addons/gdgs/importers/decoders/sog_decoder.gd")
-const GAUSSIAN_RESOURCE_BUILDER := preload("res://addons/gdgs/importers/builders/gaussian_resource_builder.gd")
+const STANDARD_PLY_DECODER := preload("res://addons/aerobeat-vendor-gdgs/importers/decoders/standard_ply_decoder.gd")
+const COMPRESSED_PLY_DECODER := preload("res://addons/aerobeat-vendor-gdgs/importers/decoders/compressed_ply_decoder.gd")
+const SPLAT_DECODER := preload("res://addons/aerobeat-vendor-gdgs/importers/decoders/splat_decoder.gd")
+const SOG_DECODER := preload("res://addons/aerobeat-vendor-gdgs/importers/decoders/sog_decoder.gd")
+const GAUSSIAN_RESOURCE_BUILDER := preload("res://addons/aerobeat-vendor-gdgs/importers/builders/gaussian_resource_builder.gd")
 
 func load_gaussian_resource(asset_path: String, format: String) -> Dictionary:
 	var decoder_result := _decode_to_canonical(asset_path, format)

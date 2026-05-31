@@ -5,11 +5,11 @@ signal background_load_progressed(result)
 signal background_load_finished(result)
 
 const VERSION: String = "0.0.1"
-const COMPOSITOR_EFFECT_SCRIPT := preload("res://addons/gdgs/runtime/compositor/gaussian_compositor_effect.gd")
-const GAUSSIAN_SPLAT_NODE_SCRIPT := preload("res://addons/gdgs/runtime/nodes/gaussian_splat_node.gd")
-const GAUSSIAN_RESOURCE_SCRIPT := preload("res://addons/gdgs/runtime/resources/gaussian_resource.gd")
-const BINARY_PLY_READER := preload("res://addons/gdgs/importers/parsers/binary_ply_reader.gd")
-const GAUSSIAN_RESOURCE_BUILDER := preload("res://addons/gdgs/importers/builders/gaussian_resource_builder.gd")
+const COMPOSITOR_EFFECT_SCRIPT := preload("res://addons/aerobeat-vendor-gdgs/runtime/compositor/gaussian_compositor_effect.gd")
+const GAUSSIAN_SPLAT_NODE_SCRIPT := preload("res://addons/aerobeat-vendor-gdgs/runtime/nodes/gaussian_splat_node.gd")
+const GAUSSIAN_RESOURCE_SCRIPT := preload("res://addons/aerobeat-vendor-gdgs/runtime/resources/gaussian_resource.gd")
+const BINARY_PLY_READER := preload("res://addons/aerobeat-vendor-gdgs/importers/parsers/binary_ply_reader.gd")
+const GAUSSIAN_RESOURCE_BUILDER := preload("res://addons/aerobeat-vendor-gdgs/importers/builders/gaussian_resource_builder.gd")
 const BACKGROUND_LOADER_SCRIPT := preload("gaussian_splat_background_loader.gd")
 const BACKGROUND_READ_WORKER_SCRIPT := preload("gaussian_splat_background_read_worker.gd")
 
